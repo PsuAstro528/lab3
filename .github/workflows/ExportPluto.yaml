@@ -33,7 +33,7 @@ jobs:
 
             - name: Rebuild PyCall
               run: | 
-                 julia --project=@. -e 'using Pkg; Pkg.build("PyCall") '
+                 julia -e 'using Pkg; Pkg.build("PyCall") '
 
             - name: Cache Julia artifacts & such
               uses: julia-actions/cache@v2
