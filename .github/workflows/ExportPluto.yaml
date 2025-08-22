@@ -16,6 +16,9 @@ permissions:
     contents: write
     # (all other permission fields default to "none")
 
+env:
+      PYTHON: ""
+
 jobs:
     build-and-deploy:
         runs-on: ubuntu-latest

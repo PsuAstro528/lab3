@@ -34,6 +34,6 @@ test = ["Pluto", "Test"]
 
 [compat]
 Pkg = "1.11.0"
-Pluto = "0.20.16"
+Pluto = "0.20.17"
 julia = "1.11"
 
