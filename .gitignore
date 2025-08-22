@@ -6,3 +6,5 @@ deps/deps.jl
 deps/build.log
 Manifest.toml
 
+.ipynb_checkpoints
+ex*backup*.jl
