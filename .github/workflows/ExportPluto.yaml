@@ -16,6 +16,13 @@ permissions:
     contents: write
     # (all other permission fields default to "none")
 
+inputs:
+  project:
+    description: 'Value passed to the --project flag. The default value is the repository root: "@."'
+    default: '@.'
+
+env:
+    PYTHON: ''
 
 jobs:
     build-and-deploy:
@@ -30,11 +37,8 @@ jobs:
                   version: "1" # This will automatically pick the latest Julia version
 
             - name: Rebuild PyCall
-              env:
-                 PYTHON: ''
               run: | 
-                 julia --project -e 'using Pkg; Pkg.build("PyCall") '
-
+                 julia --project=${{ inputs.project }} -e 'using Pkg; Pkg.build("PyCall") '
 
             - name: Cache Julia artifacts & such
               uses: julia-actions/cache@v2
@@ -55,7 +59,7 @@ jobs:
 
             - name: Run & export Pluto notebooks
               run: |
-                julia -e 'using Pkg
+                 julia -e 'using Pkg
                   Pkg.activate(mktempdir())
                   Pkg.add([
                     Pkg.PackageSpec(name="PlutoSliderServer", version="1"),
