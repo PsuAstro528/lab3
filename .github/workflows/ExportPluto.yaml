@@ -16,11 +16,6 @@ permissions:
     contents: write
     # (all other permission fields default to "none")
 
-inputs:
-  project:
-    description: 'Value passed to the --project flag. The default value is the repository root: "@."'
-    default: '@.'
-
 env:
     PYTHON: ''
 
@@ -38,7 +33,7 @@ jobs:
 
             - name: Rebuild PyCall
               run: | 
-                 julia --project=${{ inputs.project }} -e 'using Pkg; Pkg.build("PyCall") '
+                 julia --project=@. -e 'using Pkg; Pkg.build("PyCall") '
 
             - name: Cache Julia artifacts & such
               uses: julia-actions/cache@v2
