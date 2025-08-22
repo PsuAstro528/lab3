@@ -22,4 +22,4 @@ From a Pluto session, work through ex1.jl
 - Use results to help choose an appropriate file formats for your project
 
 From your Pluto sesion, work through ex2.jl
-If you are trying to run Pluto on a local system, then you encounter difficulties with the PyCall package being build successfully.  There are similar complications on the GitHub server running the continuous integration tests.  Don't worry about errors reported by the continuous integration tests for ex2.
+If you are trying to run Pluto on a local system, then you may encounter difficulties with the PyCall package being build successfully.  There are similar complications on the GitHub server running the continuous integration tests.  (That's why there is a [ex2_static.html](https://psuastro528.github.io/lab3/ex2_static.html) showing output from running on Lynx where python has been setup to communicate with Julia.)  Don't worry about errors reported by the continuous integration tests for ex2.
