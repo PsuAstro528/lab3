@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.16
+# v0.20.17
 
 using Markdown
 using InteractiveUtils
@@ -48,14 +48,14 @@ First, we're going to download some data from the web.  Julia has a built in `do
 # ╔═╡ f27e1e8f-15eb-4754-a94c-7f37c54b871e
 begin 
 	path = basename(pwd())=="test" ? "../data/" : "data/"
-	if !isdir(path)  mkdir(path)  end  # make sure there's a data directory
+	mkpath(path)    # make sure there's a data directory
 	url = "https://exoplanetarchive.ipac.caltech.edu/data/KeplerData/Simulated/kplr_dr25_inj1_plti.txt"
 	filename_ipac = joinpath(path,basename(url)) # extract the filename and prepend "data/"
 	time_to_download = NaN
 	if !isfile(filename_ipac)  # skip downloading if file already exists
 	    time_to_download = @elapsed download(url,filename_ipac)
 	end
-end
+end;
 
 # ╔═╡ 80f02c3a-6751-48df-92ec-13f5c7d8c71e
 if !isnan(time_to_download)
@@ -447,7 +447,7 @@ display_msg_if_fail(check_type_isa(:response_2j,response_2j,[AbstractString,Mark
 # ╔═╡ 7b9d26c2-899e-45e9-b664-39d5f1adfe3f
 begin 
 	jld2_filesize = filesize(filename_jld2) / 1024^2;
-	hint(md"The JLD2 file size is $jld2_filesize MB versus $csv_filesize MB for the CSV.")
+	hint(md"The JLD2 file size is $(round(jld2_filesize,digits=2)) MB versus $(round(csv_filesize,digits=2)) MB for the CSV.")
 end
 
 # ╔═╡ fc01d57f-c90b-4231-96be-ddd48656d55e
@@ -511,7 +511,7 @@ display_msg_if_fail(check_type_isa(:response_2m,response_2m,[AbstractString,Mark
 md"# Helper Functions"
 
 # ╔═╡ fb23d6c6-b812-4fe1-b224-0014bedbd43f
-ChooseDisplayMode()
+WidthOverDocs()
 
 # ╔═╡ 1e53aa10-dff6-40d5-89e2-da194ffc2052
 TableOfContents()
@@ -589,7 +589,7 @@ end
 # ╔═╡ 90d5244e-17be-4601-b922-8c254f1248bf
 begin
 	fits_filesize = filesize(filename_fits) /1024^2
-	hint(md"The FITS file size is $fits_filesize MB versus $jld2_filesize MB for the JLD2 and $csv_filesize MB for the CSV.")
+	hint(md"The FITS file size is $(round(fits_filesize,digits=2)) MB versus $(round(jld2_filesize,digits=2)) MB for the JLD2 and $(round(csv_filesize,digits=2)) MB for the CSV.")
 end
 
 # ╔═╡ 52f9edd0-79b0-4a9a-9930-3a05d3aa2447
@@ -1244,7 +1244,7 @@ version = "17.4.0+2"
 # ╟─eac67cc9-754b-4f7d-add8-93900a1b5b49
 # ╟─64224c6b-c5a0-44f2-b2a0-7f77759cb848
 # ╟─73c06bb1-be49-46bd-b7f1-c45cc56af7b4
-# ╠═ebfaa677-829b-4bf9-bdbb-19f3c87dd3a4
+# ╟─ebfaa677-829b-4bf9-bdbb-19f3c87dd3a4
 # ╟─945f5a55-3026-4497-9ece-8af878c87788
 # ╠═57397ee4-9efc-48b3-b640-d2b7a10da633
 # ╟─8059a6a3-384a-4344-8a23-650ee0be10c2

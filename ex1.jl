@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.16
+# v0.20.17
 
 using Markdown
 using InteractiveUtils
@@ -20,6 +20,9 @@ end
 begin
 	using Random, PlutoTest, BenchmarkTools
 	using PlutoUI, PlutoTeachingTools
+	using LinearAlgebra
+	using LoopVectorization
+	#using FixedSizeArrays
 	using Plots
 end
 
@@ -53,8 +56,8 @@ md"""
 
 # ╔═╡ 7390b2d6-c1c2-4498-bcbb-1a8511e29b7d
 "Multiply matrix A and vector b by hand using rows for inner loop"
-function multiply_matrix_vector_rows_inner(A::Matrix{T1}, b::Vector{T2})  where {T1<:Number, T2<:Number}
-	# INSERT CODE
+function multiply_matrix_vector_rows_inner(A::AbstractMatrix{T1}, b::AbstractVector{T2})  where {T1<:Number, T2<:Number}
+	 # INSERT CODE
 	return missing
 end
 
@@ -73,7 +76,7 @@ begin
         almost(md"The values of the output vector aren't right.")
     else
         rows_inner_is_good_to_go = true
-        correct(md"I don't recognize a problem.  Before we keep going, let's check that your function passes the test function that you build above.")
+        correct(md"I don't recognize a problem.  Below you'll check that the results of your function match those of the reference implementation.")
     end
 end
 
@@ -106,6 +109,13 @@ Since we have a trusted routine to compute the matrix-vector product, we can bui
 
 # ╔═╡ f696696f-1a96-4d65-b2d0-3b7686402b87
 function test_mul_mat_vec(func::Function )
+	A = rand(6,5)
+	x = rand(5)
+	test1 = all(isapprox(multiply_matrix_vector_default(A,x), func(A,x), atol=1e-8))
+	A = rand(4,5)
+	x = rand(5)
+	test2 = all(isapprox(multiply_matrix_vector_default(A,x), func(A,x), atol=1e-8))
+	return all((test1, test2,) )
 	# INSERT CODE
 	return missing
 end
@@ -197,8 +207,8 @@ md"#### Benchmarks for larger problem size"
 begin    # Create matrix and vector for second set of benchmarks
 	nrows_benchmark2 = 1024
 	ncols_benchmark2 = 1024
-	test_in_A2 = rand(nrows_benchmark2,ncols_benchmark2)
-	test_in_b2 = rand(ncols_benchmark2)
+	test_in_A2 = randn(nrows_benchmark2,ncols_benchmark2)
+	test_in_b2 = randn(ncols_benchmark2)
 end;
 
 # ╔═╡ b0d24460-5bda-4ab0-9735-319a1cec55eb
@@ -229,6 +239,9 @@ What do you think explains the differences?"""
 # ╔═╡ 61b27b51-2e73-4140-8579-ca62920c4326
 response_1d = missing
 
+# ╔═╡ 043115a4-fd56-4501-bf08-200ce1de704e
+LinearAlgebra.BLAS.get_num_threads()
+
 # ╔═╡ fb912d1a-5465-4b79-b059-8d8ee798479d
 begin
     if !@isdefined(response_1d)
@@ -253,9 +266,9 @@ function multiply_matrix_vector_rows_inner(A::AbstractMatrix{T1}, b::AbstractVec
     @assert size(A,2) == size(b,1)
     # Allocate output array of correct type and size
     out = zeros( promote_type(eltype(A),eltype(b)), size(A,1) )  
-	for j in 1:size(A,2)
+	@inbounds for j in 1:size(A,2)
         @simd for i in 1:size(A,1)           # Use SIMD over inner loop
-            @inbounds out[i] += A[i,j]*b[j]  # Don't check that indicies are valid
+            out[i] += A[i,j]*b[j]  # Don't check that indicies are valid
         end
     end
     return out
@@ -407,13 +420,14 @@ end
 # ╔═╡ d615c199-4b33-4844-a87f-c9512f2481a3
 function run_benchmarks(nrows, ncols)
 	@assert length(nrows) == length(ncols)
-	times_default = zeros(length(nrows))
-	times_rows = zeros(length(nrows))
-	times_cols = zeros(length(nrows))
+	n = length(nrows)
+	times_default = zeros(n)
+	times_rows = zeros(n)
+	times_cols = zeros(n)
 
-	for i in 1:length(nrows_benchmark_plt)
-		test_in_A_plt = rand(nrows[i],ncols[i])
-		test_in_b_plt = rand(ncols[i])
+	for i in 1:n
+		test_in_A_plt = randn(nrows[i],ncols[i])
+		test_in_b_plt = randn(ncols[i])
 		times_default[i] = @elapsed multiply_matrix_vector_default(test_in_A_plt,test_in_b_plt)
 		times_rows[i] = @elapsed multiply_matrix_vector_rows_inner(test_in_A_plt,test_in_b_plt)
 		times_cols[i] = @elapsed multiply_matrix_vector_cols_inner(test_in_A_plt,test_in_b_plt)
@@ -446,10 +460,10 @@ end
 md"The above plot is for square problems.  You can look at additional benchmarks before for short or tall vectors below."
 
 # ╔═╡ b2132261-aa1f-4db0-a6ef-95f763f390d9
-ncols_short_benchmark_plt = max.(1,floor.(Int64,nrows_benchmark_plt ./ 4));
+ncols_short_benchmark_plt = max.(1,floor.(Int64,nrows_benchmark_plt ./ 4))
 
 # ╔═╡ d871280d-4e70-41a3-bee2-f81c1844ef2b
-ncols_tall_benchmark_plt = 4 .* nrows_benchmark_plt;
+ncols_tall_benchmark_plt = 4 .* nrows_benchmark_plt
 
 # ╔═╡ b57bfd3b-1d81-4256-8634-41173b2ed93a
 (times_short_default_plt, times_short_rows_plt, times_short_cols_plt ) = run_benchmarks(nrows_benchmark_plt, ncols_short_benchmark_plt);
@@ -489,7 +503,7 @@ end
 md"# Helper Code"
 
 # ╔═╡ 1168a71d-ddad-4d4f-bc37-8b609e3ab47e
-ChooseDisplayMode()
+WidthOverDocs()
 
 # ╔═╡ 6a9e8fe0-259b-4826-9eaa-667cdbb8dfca
 TableOfContents()
@@ -498,6 +512,8 @@ TableOfContents()
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoTeachingTools = "661c6b06-c737-4d37-b85c-46df65de6f69"
 PlutoTest = "cb4044da-4d16-4ffa-a6a3-8cad7f73ebdc"
@@ -505,6 +521,10 @@ PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [compat]
+BenchmarkTools = "~1.6.0"
+LoopVectorization = "~0.12.172"
+Plots = "~1.40.19"
+PlutoTeachingTools = "~0.4.5"
 PlutoTest = "~0.2.2"
 PlutoUI = "~0.7.52"
 """
@@ -515,13 +535,27 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.11.2"
 manifest_format = "2.0"
-project_hash = "745f108328b23f6b1c462e2ef7d66e67c30eed4d"
+project_hash = "dce5e19a299fea9f34c41657d865b6cfd9f25cd4"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
 git-tree-sha1 = "6e1d2a35f2f90a4bc7c2ed98079b2ba09c35b83a"
 uuid = "6e696c72-6542-2067-7265-42206c756150"
 version = "1.3.2"
+
+[[deps.Adapt]]
+deps = ["LinearAlgebra", "Requires"]
+git-tree-sha1 = "f7817e2e585aa6d924fd714df1e2a84be7896c60"
+uuid = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
+version = "4.3.0"
+
+    [deps.Adapt.extensions]
+    AdaptSparseArraysExt = "SparseArrays"
+    AdaptStaticArraysExt = "StaticArrays"
+
+    [deps.Adapt.weakdeps]
+    SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+    StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [[deps.AliasTables]]
 deps = ["PtrArrays", "Random"]
@@ -532,6 +566,38 @@ version = "1.1.3"
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
 version = "1.1.2"
+
+[[deps.ArrayInterface]]
+deps = ["Adapt", "LinearAlgebra"]
+git-tree-sha1 = "9606d7832795cbef89e06a550475be300364a8aa"
+uuid = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
+version = "7.19.0"
+
+    [deps.ArrayInterface.extensions]
+    ArrayInterfaceBandedMatricesExt = "BandedMatrices"
+    ArrayInterfaceBlockBandedMatricesExt = "BlockBandedMatrices"
+    ArrayInterfaceCUDAExt = "CUDA"
+    ArrayInterfaceCUDSSExt = "CUDSS"
+    ArrayInterfaceChainRulesCoreExt = "ChainRulesCore"
+    ArrayInterfaceChainRulesExt = "ChainRules"
+    ArrayInterfaceGPUArraysCoreExt = "GPUArraysCore"
+    ArrayInterfaceReverseDiffExt = "ReverseDiff"
+    ArrayInterfaceSparseArraysExt = "SparseArrays"
+    ArrayInterfaceStaticArraysCoreExt = "StaticArraysCore"
+    ArrayInterfaceTrackerExt = "Tracker"
+
+    [deps.ArrayInterface.weakdeps]
+    BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
+    BlockBandedMatrices = "ffab5731-97b5-5995-9138-79e8c1846df0"
+    CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+    CUDSS = "45b445bb-4962-46a0-9369-b4df9d0f772e"
+    ChainRules = "082447d4-558c-5d27-93f4-14fc19e9eca2"
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    GPUArraysCore = "46192b85-c4d5-4398-a991-12ede77f4527"
+    ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
+    SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+    StaticArraysCore = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
+    Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -552,17 +618,35 @@ git-tree-sha1 = "0691e34b3bb8be9307330f88d1a3c3f25466c24d"
 uuid = "d1d4a3ce-64b1-5f1a-9ba4-7e7e69966f35"
 version = "0.1.9"
 
+[[deps.BitTwiddlingConvenienceFunctions]]
+deps = ["Static"]
+git-tree-sha1 = "f21cfd4950cb9f0587d5067e69405ad2acd27b87"
+uuid = "62783981-4cbd-42fc-bca8-16325de8dc4b"
+version = "0.1.6"
+
 [[deps.Bzip2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "1b96ea4a01afe0ea4090c5c8039690672dd13f2e"
 uuid = "6e34b625-4abd-537c-b88f-471c36dfa7a0"
 version = "1.0.9+0"
 
+[[deps.CPUSummary]]
+deps = ["CpuId", "IfElse", "PrecompileTools", "Preferences", "Static"]
+git-tree-sha1 = "f3a21d7fc84ba618a779d1ed2fcca2e682865bab"
+uuid = "2a0fbf3d-bb9c-48f3-b0a9-814d99fd7ab9"
+version = "0.2.7"
+
 [[deps.Cairo_jll]]
 deps = ["Artifacts", "Bzip2_jll", "CompilerSupportLibraries_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "JLLWrappers", "LZO_jll", "Libdl", "Pixman_jll", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Zlib_jll", "libpng_jll"]
 git-tree-sha1 = "fde3bf89aead2e723284a8ff9cdf5b551ed700e8"
 uuid = "83423d85-b0ee-5818-9007-b63ccbeb887a"
 version = "1.18.5+0"
+
+[[deps.CloseOpenIntervals]]
+deps = ["Static", "StaticArrayInterface"]
+git-tree-sha1 = "05ba0d07cd4fd8b7a39541e31a7b0254704ea581"
+uuid = "fb6a15b2-703c-40df-9091-08a04967cfa9"
+version = "0.1.13"
 
 [[deps.CodecZlib]]
 deps = ["TranscodingStreams", "Zlib_jll"]
@@ -604,6 +688,11 @@ git-tree-sha1 = "37ea44092930b1811e666c3bc38065d7d87fcc74"
 uuid = "5ae59095-9a9b-59fe-a467-6f913c188581"
 version = "0.13.1"
 
+[[deps.CommonWorldInvalidations]]
+git-tree-sha1 = "ae52d1c52048455e85a387fbee9be553ec2b68d0"
+uuid = "f70d9fcc-98c5-4d4a-abd7-e4cdeebd8ca8"
+version = "1.0.0"
+
 [[deps.Compat]]
 deps = ["TOML", "UUIDs"]
 git-tree-sha1 = "0037835448781bb46feb39866934e243886d756a"
@@ -629,6 +718,12 @@ version = "2.5.0"
 git-tree-sha1 = "439e35b0b36e2e5881738abc8857bd92ad6ff9a8"
 uuid = "d38c429a-6771-53c6-b99e-75d170b6e991"
 version = "0.6.3"
+
+[[deps.CpuId]]
+deps = ["Markdown"]
+git-tree-sha1 = "fcbb72b032692610bfbdb15018ac16a36cf2e406"
+uuid = "adafc99b-e345-5852-983c-f28acb93d879"
+version = "0.3.1"
 
 [[deps.DataAPI]]
 git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
@@ -784,6 +879,12 @@ git-tree-sha1 = "f923f9a774fcf3f5cb761bfa43aeadd689714813"
 uuid = "2e76f6c2-a576-52d4-95c1-20adfe4de566"
 version = "8.5.1+0"
 
+[[deps.HostCPUFeatures]]
+deps = ["BitTwiddlingConvenienceFunctions", "IfElse", "Libdl", "Static"]
+git-tree-sha1 = "8e070b599339d622e9a081d17230d74a5c473293"
+uuid = "3e5b6fbb-0976-4d2c-9146-d79de83f2fb0"
+version = "0.1.17"
+
 [[deps.Hyperscript]]
 deps = ["Test"]
 git-tree-sha1 = "179267cfa5e712760cd43dcae385d7ea90cc25a4"
@@ -801,6 +902,11 @@ deps = ["Logging", "Random"]
 git-tree-sha1 = "b6d6bfdd7ce25b0f9b2f6b3dd56b2673a66c8770"
 uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
 version = "0.2.5"
+
+[[deps.IfElse]]
+git-tree-sha1 = "debdd00ffef04665ccbb3e150747a77560e8fad1"
+uuid = "615f187c-cbe4-4ef1-ba3b-2fcf58d6d173"
+version = "0.1.1"
 
 [[deps.InteractiveUtils]]
 deps = ["Markdown"]
@@ -882,6 +988,12 @@ version = "0.16.9"
     SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
     SymEngine = "123dc426-2d89-5057-bbad-38513e3affd8"
     tectonic_jll = "d7dd28d6-a5e6-559c-9131-7eb760cdacc5"
+
+[[deps.LayoutPointers]]
+deps = ["ArrayInterface", "LinearAlgebra", "ManualMemory", "SIMDTypes", "Static", "StaticArrayInterface"]
+git-tree-sha1 = "a9eaadb366f5493a5654e843864c13d8b107548c"
+uuid = "10f19ff3-798f-405d-979b-55457f8fc047"
+version = "0.1.17"
 
 [[deps.LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
@@ -979,6 +1091,21 @@ git-tree-sha1 = "f02b56007b064fbfddb4c9cd60161b6dd0f40df3"
 uuid = "e6f89c97-d47a-5376-807f-9c37f3926c36"
 version = "1.1.0"
 
+[[deps.LoopVectorization]]
+deps = ["ArrayInterface", "CPUSummary", "CloseOpenIntervals", "DocStringExtensions", "HostCPUFeatures", "IfElse", "LayoutPointers", "LinearAlgebra", "OffsetArrays", "PolyesterWeave", "PrecompileTools", "SIMDTypes", "SLEEFPirates", "Static", "StaticArrayInterface", "ThreadingUtilities", "UnPack", "VectorizationBase"]
+git-tree-sha1 = "e5afce7eaf5b5ca0d444bcb4dc4fd78c54cbbac0"
+uuid = "bdcacae8-1622-11e9-2a5c-532679323890"
+version = "0.12.172"
+
+    [deps.LoopVectorization.extensions]
+    ForwardDiffExt = ["ChainRulesCore", "ForwardDiff"]
+    SpecialFunctionsExt = "SpecialFunctions"
+
+    [deps.LoopVectorization.weakdeps]
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+    SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+
 [[deps.MIMEs]]
 git-tree-sha1 = "c64d943587f7187e751162b3b84445bbbd79f691"
 uuid = "6c6e2e6c-3030-632d-7369-2d6c69616d65"
@@ -988,6 +1115,11 @@ version = "1.1.0"
 git-tree-sha1 = "1e0228a030642014fe5cfe68c2c0a818f9e3f522"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 version = "0.5.16"
+
+[[deps.ManualMemory]]
+git-tree-sha1 = "bcaef4fc7a0cfe2cba636d84cda54b5e4e4ca3cd"
+uuid = "d125e4d3-2237-4719-b19c-fa641b8a4667"
+version = "0.1.8"
 
 [[deps.Markdown]]
 deps = ["Base64"]
@@ -1033,6 +1165,15 @@ version = "1.1.3"
 [[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
 version = "1.2.0"
+
+[[deps.OffsetArrays]]
+git-tree-sha1 = "117432e406b5c023f665fa73dc26e79ec3630151"
+uuid = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
+version = "1.17.0"
+weakdeps = ["Adapt"]
+
+    [deps.OffsetArrays.extensions]
+    OffsetArraysAdaptExt = "Adapt"
 
 [[deps.Ogg_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -1155,6 +1296,12 @@ git-tree-sha1 = "8329a3a4f75e178c11c1ce2342778bcbbbfa7e3c"
 uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 version = "0.7.71"
 
+[[deps.PolyesterWeave]]
+deps = ["BitTwiddlingConvenienceFunctions", "CPUSummary", "IfElse", "Static", "ThreadingUtilities"]
+git-tree-sha1 = "645bed98cd47f72f67316fd42fc47dee771aefcd"
+uuid = "1d0040c9-8b98-4ee7-8388-3f51789ca0ad"
+version = "0.2.2"
+
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
 git-tree-sha1 = "5aa36f7049a63a1528fe8f7c3f2113413ffd4e1f"
@@ -1248,6 +1395,17 @@ version = "1.3.1"
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 version = "0.7.0"
 
+[[deps.SIMDTypes]]
+git-tree-sha1 = "330289636fb8107c5f32088d2741e9fd7a061a5c"
+uuid = "94e857df-77ce-4151-89e5-788b33177be4"
+version = "0.1.0"
+
+[[deps.SLEEFPirates]]
+deps = ["IfElse", "Static", "VectorizationBase"]
+git-tree-sha1 = "456f610ca2fbd1c14f5fcf31c6bfadc55e7d66e0"
+uuid = "476501e8-09a2-5ece-8869-fb82de89a1fa"
+version = "0.6.43"
+
 [[deps.Scratch]]
 deps = ["Dates"]
 git-tree-sha1 = "9b81b8393e50b7d4e6d0a9f14e192294d3b7c109"
@@ -1289,6 +1447,26 @@ deps = ["Random"]
 git-tree-sha1 = "95af145932c2ed859b63329952ce8d633719f091"
 uuid = "860ef19b-820b-49d6-a774-d7a799459cd3"
 version = "1.0.3"
+
+[[deps.Static]]
+deps = ["CommonWorldInvalidations", "IfElse", "PrecompileTools"]
+git-tree-sha1 = "f737d444cb0ad07e61b3c1bef8eb91203c321eff"
+uuid = "aedffcd0-7271-4cad-89d0-dc628f76c6d3"
+version = "1.2.0"
+
+[[deps.StaticArrayInterface]]
+deps = ["ArrayInterface", "Compat", "IfElse", "LinearAlgebra", "PrecompileTools", "Static"]
+git-tree-sha1 = "96381d50f1ce85f2663584c8e886a6ca97e60554"
+uuid = "0d7ed370-da01-4f52-bd93-41d350b8b718"
+version = "1.8.0"
+
+    [deps.StaticArrayInterface.extensions]
+    StaticArrayInterfaceOffsetArraysExt = "OffsetArrays"
+    StaticArrayInterfaceStaticArraysExt = "StaticArrays"
+
+    [deps.StaticArrayInterface.weakdeps]
+    OffsetArrays = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
+    StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [[deps.Statistics]]
 deps = ["LinearAlgebra"]
@@ -1342,6 +1520,12 @@ deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 version = "1.11.0"
 
+[[deps.ThreadingUtilities]]
+deps = ["ManualMemory"]
+git-tree-sha1 = "d969183d3d244b6c33796b5ed01ab97328f2db85"
+uuid = "8290d209-cae3-49c0-8002-c8c24d57dab5"
+version = "0.5.5"
+
 [[deps.TranscodingStreams]]
 git-tree-sha1 = "0c45878dcfdcfa8480052b6ab162cdd138781742"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
@@ -1361,6 +1545,11 @@ version = "1.6.1"
 deps = ["Random", "SHA"]
 uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 version = "1.11.0"
+
+[[deps.UnPack]]
+git-tree-sha1 = "387c1f73762231e86e0c9c5443ce3b4a0a9a0c2b"
+uuid = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
+version = "1.0.2"
 
 [[deps.Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
@@ -1400,6 +1589,12 @@ version = "1.7.0"
 git-tree-sha1 = "ca0969166a028236229f63514992fc073799bb78"
 uuid = "41fe7b60-77ed-43a1-b4f0-825fd5a5650d"
 version = "0.2.0"
+
+[[deps.VectorizationBase]]
+deps = ["ArrayInterface", "CPUSummary", "HostCPUFeatures", "IfElse", "LayoutPointers", "Libdl", "LinearAlgebra", "SIMDTypes", "Static", "StaticArrayInterface"]
+git-tree-sha1 = "4ab62a49f1d8d9548a1c8d1a75e5f55cf196f64e"
+uuid = "3d5dd08c-fd9d-11e8-17fa-ed2836048c2f"
+version = "0.21.71"
 
 [[deps.Vulkan_Loader_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Wayland_jll", "Xorg_libX11_jll", "Xorg_libXrandr_jll", "xkbcommon_jll"]
@@ -1700,6 +1895,7 @@ version = "1.9.2+0"
 # ╟─5929d265-8c2f-488d-9a44-9a95b238c0e8
 # ╟─1693883a-8d93-4845-9082-4be0406455f7
 # ╠═61b27b51-2e73-4140-8579-ca62920c4326
+# ╠═043115a4-fd56-4501-bf08-200ce1de704e
 # ╟─fb912d1a-5465-4b79-b059-8d8ee798479d
 # ╟─417e47a9-cfa7-4067-afd3-9020c06179de
 # ╟─773ec174-8bf4-4de6-8dc9-783bfc08694b
@@ -1727,7 +1923,7 @@ version = "1.9.2+0"
 # ╠═99fd596c-efae-4cf1-8e91-f46b5791f3f3
 # ╟─a65d3972-9870-4a76-bba7-bcaccc10ecfb
 # ╟─9028e886-dd3a-4c68-a4e9-d3f9ae65cbdf
-# ╟─4781aac2-5f70-4e95-afc0-353c1419c97c
+# ╠═4781aac2-5f70-4e95-afc0-353c1419c97c
 # ╟─d615c199-4b33-4844-a87f-c9512f2481a3
 # ╟─2eef234f-b93b-4fe4-ac50-445da9ffb8e7
 # ╟─96476ef8-3275-492c-9caf-4c2702d84167
