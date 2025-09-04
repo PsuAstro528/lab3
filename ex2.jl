@@ -18,7 +18,7 @@ end
 
 # ╔═╡ ac87ced2-986f-4e6c-80b2-104b25c171c2
 begin
-	using CSV, JLD2, FITSIO, FileIO# , HDF5
+	using CSV, JLD2, FITSIO, TOML, FileIO# , HDF5
 	using DataFrames #, Query
 	using PyCall
 	using PlutoUI, PlutoTeachingTools
@@ -45,15 +45,30 @@ md"""
 First, we're going to download some data from the web.  Julia has a built in `download` function that can be handy for this.  It relies on your system having some utilities already installed (e.g., `curl`, `wget` or `fetch`).  If you run this on a local system and run into trouble, then you can leave the cell below, and manually download the file to the data subdirectory.
 """
 
-# ╔═╡ f27e1e8f-15eb-4754-a94c-7f37c54b871e
+# ╔═╡ a0f491f7-12bc-4855-b6b2-f5c9264cd7ad
 begin 
 	path = basename(pwd())=="test" ? "../data/" : "data/"
-	mkpath(path)    # make sure there's a data directory
 	url = "https://exoplanetarchive.ipac.caltech.edu/data/KeplerData/Simulated/kplr_dr25_inj1_plti.txt"
 	filename_ipac = joinpath(path,basename(url)) # extract the filename and prepend "data/"
+end
+
+# ╔═╡ b38513f1-e002-47a9-bc22-dbce80c0e075
+begin
 	time_to_download = NaN
+	mkpath(path)    # make sure there's a data directory
+	filename_dl_benchmark = joinpath(path,"dl_benchmark.toml")
 	if !isfile(filename_ipac)  # skip downloading if file already exists
 	    time_to_download = @elapsed download(url,filename_ipac)
+		open(filename_dl_benchmark, "w") do io
+           TOML.print(io, Dict("time_to_download"=>time_to_download))
+       end
+	 else
+		try
+			benchmark_data = TOML.parsefile(filename_dl_benchmark)
+			global time_to_download = benchmark_data["time_to_download"]
+		catch
+			@warn "Couldn't find how long it took to download the file."
+		end
 	end
 end;
 
@@ -375,7 +390,7 @@ end
 # ╔═╡ 8255b5a9-cbe6-4604-bedd-0e366f311096
 md"""
 Let's check the filesizes for the JLD2 file to the CSV file.  
-The small CSV file we created is $small_jld2_filesize KB.  
+The small CSV file we created is $small_csv_filesize KB.  
 
 2g.  How large would you guess the JLD2 file will be?  Once you've made your prediction, mouse over the hint box.  If you were suprised, try to explain what happened.
 """
@@ -458,6 +473,7 @@ Astronomers often use the [FITS file format](https://en.wikipedia.org/wiki/FITS)
 5](https://www.hdfgroup.org/solutions/hdf5/), it's a very flexible (e.g., it can store both text and binary data) and thus complicated file
  format.  
 Therefore, most languages call a common [FITSIO library written in C](https://heasarc.gsfc.nasa.gov/fitsio/), rather than implementing code themselves.  Indeed, that's what [Julia's FITSIO.jl package](https://github.com/JuliaAstro/FITSIO.jl) does.
+(The [FITSFile.jl](https://barrettp.github.io/FITSFiles.jl/dev/) package aims to provide a Julia-native FITS reader, but last I checked there were still many features missing.)
 
 Unfortunately, the FITSIO package isn't as polished as the others.  It expects a `Dict` rather than a `DataFrame`, and it can't handle missing values.  So I've provided some helper functions at the bottom of the notebook.  Also, FITS files have complicated headers, so I'll provide a function to read all the tabular data from a simple FITS file.  As usual, we'll use each function once, so that Julia compiles them before we start timing.
 """
@@ -610,6 +626,7 @@ JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 PlutoTeachingTools = "661c6b06-c737-4d37-b85c-46df65de6f69"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
+TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
 CSV = "~0.10.15"
@@ -628,7 +645,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.11.2"
 manifest_format = "2.0"
-project_hash = "6f05477d556ac71f980f3e91f337525546cb587d"
+project_hash = "205800bac8e1b928ef35dd8eafd997be7c2acb45"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -1197,7 +1214,8 @@ version = "17.4.0+2"
 # ╟─e0e60e09-3808-4d6b-a773-6ba59c02f517
 # ╟─8c1d81ab-d215-4972-afeb-7e00bf6063c2
 # ╟─1607eac9-e76f-4d1f-a9ce-981ce3be9bea
-# ╠═f27e1e8f-15eb-4754-a94c-7f37c54b871e
+# ╠═a0f491f7-12bc-4855-b6b2-f5c9264cd7ad
+# ╟─b38513f1-e002-47a9-bc22-dbce80c0e075
 # ╟─80f02c3a-6751-48df-92ec-13f5c7d8c71e
 # ╟─624c9038-3008-4e78-a149-60796dacf9c0
 # ╟─2eb255d9-707d-4224-a0ce-fe90a1c69722

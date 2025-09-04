@@ -51,7 +51,7 @@ end
 # ╔═╡ 0024c171-234c-4c4b-9742-064ad8136451
 md"""
 ## Hand-coded, inner loop over rows
-1a.  Write a function `multiply_matrix_vector_rows_inner(A,b)`that takes a matrix A and a vector b and returns the product of A times b, but without using Julia's default linear algebra routines. You'll use two loops. For this part, let the inner loop run over the rows (i.e., first index) for A.  You'll likely want to make use of the `size` function.
+1a.  Write a function `multiply_matrix_vector_rows_inner(A,b)`that takes a matrix A and a vector b and returns the product of A times b, but without using Julia's default linear algebra routines. You'll use two loops. For this part, let the inner loop run over the rows (i.e., first index) for A.  You'll likely want to make use of the `size` function.  There are some more hints below that you can see once you've thought about the problem by hovering over them with your mouse.
 """
 
 # ╔═╡ 7390b2d6-c1c2-4498-bcbb-1a8511e29b7d
@@ -109,13 +109,6 @@ Since we have a trusted routine to compute the matrix-vector product, we can bui
 
 # ╔═╡ f696696f-1a96-4d65-b2d0-3b7686402b87
 function test_mul_mat_vec(func::Function )
-	A = rand(6,5)
-	x = rand(5)
-	test1 = all(isapprox(multiply_matrix_vector_default(A,x), func(A,x), atol=1e-8))
-	A = rand(4,5)
-	x = rand(5)
-	test2 = all(isapprox(multiply_matrix_vector_default(A,x), func(A,x), atol=1e-8))
-	return all((test1, test2,) )
 	# INSERT CODE
 	return missing
 end
@@ -147,7 +140,7 @@ Which version of the function do you predict will perform best for large matrice
 """
 
 # ╔═╡ 2c6af190-9cb0-420c-b997-6245adb011a7
-response_1c = missing
+response_1c = missing # replace missing with md"your response"
 
 # ╔═╡ e6cd6185-6933-4857-8007-80ecae3686a7
 begin
@@ -239,9 +232,6 @@ What do you think explains the differences?"""
 # ╔═╡ 61b27b51-2e73-4140-8579-ca62920c4326
 response_1d = missing
 
-# ╔═╡ 043115a4-fd56-4501-bf08-200ce1de704e
-LinearAlgebra.BLAS.get_num_threads()
-
 # ╔═╡ fb912d1a-5465-4b79-b059-8d8ee798479d
 begin
     if !@isdefined(response_1d)
@@ -250,6 +240,9 @@ begin
     	still_missing()
 	end
 end
+
+# ╔═╡ 043115a4-fd56-4501-bf08-200ce1de704e
+LinearAlgebra.BLAS.get_num_threads()
 
 # ╔═╡ 417e47a9-cfa7-4067-afd3-9020c06179de
 md"""### Optimize your code"""
@@ -436,7 +429,9 @@ function run_benchmarks(nrows, ncols)
 end
 
 # ╔═╡ 2eef234f-b93b-4fe4-ac50-445da9ffb8e7
-(times_square_default_plt, times_square_rows_plt, times_square_cols_plt ) = run_benchmarks(nrows_benchmark_plt, ncols_square_benchmark_plt);
+if ready_benchmarks2 
+	(times_square_default_plt, times_square_rows_plt, times_square_cols_plt ) = run_benchmarks(nrows_benchmark_plt, ncols_square_benchmark_plt);
+end
 
 # ╔═╡ 96476ef8-3275-492c-9caf-4c2702d84167
 function plot_benchmarks(nrows, times_default, times_rows, times_cols)
@@ -451,13 +446,13 @@ function plot_benchmarks(nrows, times_default, times_rows, times_cols)
 end
 
 # ╔═╡ 412777aa-ec37-4062-a3e6-4e844add94c0
-begin 
+if ready_benchmarks2 
 	local plt = plot_benchmarks(nrows_benchmark_plt,times_square_default_plt, times_square_rows_plt,times_square_cols_plt)
 	title!(plt,"Square Matrix multiply")
 end
 
 # ╔═╡ 988b3ec3-71cd-4ea4-b007-e7d2c16d3502
-md"The above plot is for square problems.  You can look at additional benchmarks before for short or tall vectors below."
+md"The above plot is for square problems.  You can look at additional benchmarks below for short or tall vectors below."
 
 # ╔═╡ b2132261-aa1f-4db0-a6ef-95f763f390d9
 ncols_short_benchmark_plt = max.(1,floor.(Int64,nrows_benchmark_plt ./ 4))
@@ -466,13 +461,17 @@ ncols_short_benchmark_plt = max.(1,floor.(Int64,nrows_benchmark_plt ./ 4))
 ncols_tall_benchmark_plt = 4 .* nrows_benchmark_plt
 
 # ╔═╡ b57bfd3b-1d81-4256-8634-41173b2ed93a
-(times_short_default_plt, times_short_rows_plt, times_short_cols_plt ) = run_benchmarks(nrows_benchmark_plt, ncols_short_benchmark_plt);
+if ready_benchmarks2 
+	(times_short_default_plt, times_short_rows_plt, times_short_cols_plt ) = run_benchmarks(nrows_benchmark_plt, ncols_short_benchmark_plt);
+end
 
 # ╔═╡ b6879ac5-9521-4b9b-b488-3c98ed87960a
-(times_tall_default_plt, times_tall_rows_plt, times_tall_cols_plt ) = run_benchmarks(nrows_benchmark_plt, ncols_tall_benchmark_plt);
+if ready_benchmarks2 
+	(times_tall_default_plt, times_tall_rows_plt, times_tall_cols_plt ) = run_benchmarks(nrows_benchmark_plt, ncols_tall_benchmark_plt);
+end
 
 # ╔═╡ 07ea6486-edba-4174-b0ee-0cf98096b785
-begin
+if ready_benchmarks2 
 	plt_tall = plot_benchmarks(nrows_benchmark_plt,times_tall_default_plt, times_tall_rows_plt,times_tall_cols_plt)
 	title!(plt_tall,"Tall")
 	plt_short = plot_benchmarks(nrows_benchmark_plt,times_short_default_plt, times_short_rows_plt,times_short_cols_plt)
@@ -1895,8 +1894,8 @@ version = "1.9.2+0"
 # ╟─5929d265-8c2f-488d-9a44-9a95b238c0e8
 # ╟─1693883a-8d93-4845-9082-4be0406455f7
 # ╠═61b27b51-2e73-4140-8579-ca62920c4326
-# ╠═043115a4-fd56-4501-bf08-200ce1de704e
 # ╟─fb912d1a-5465-4b79-b059-8d8ee798479d
+# ╠═043115a4-fd56-4501-bf08-200ce1de704e
 # ╟─417e47a9-cfa7-4067-afd3-9020c06179de
 # ╟─773ec174-8bf4-4de6-8dc9-783bfc08694b
 # ╟─ef3f6c8a-c3a1-4962-b2c6-aa733337c3a1
@@ -1925,7 +1924,7 @@ version = "1.9.2+0"
 # ╟─9028e886-dd3a-4c68-a4e9-d3f9ae65cbdf
 # ╠═4781aac2-5f70-4e95-afc0-353c1419c97c
 # ╟─d615c199-4b33-4844-a87f-c9512f2481a3
-# ╟─2eef234f-b93b-4fe4-ac50-445da9ffb8e7
+# ╠═2eef234f-b93b-4fe4-ac50-445da9ffb8e7
 # ╟─96476ef8-3275-492c-9caf-4c2702d84167
 # ╟─412777aa-ec37-4062-a3e6-4e844add94c0
 # ╟─988b3ec3-71cd-4ea4-b007-e7d2c16d3502
