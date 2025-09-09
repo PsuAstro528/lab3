@@ -259,9 +259,9 @@ function multiply_matrix_vector_rows_inner(A::AbstractMatrix{T1}, b::AbstractVec
     @assert size(A,2) == size(b,1)
     # Allocate output array of correct type and size
     out = zeros( promote_type(eltype(A),eltype(b)), size(A,1) )  
-	@inbounds for j in 1:size(A,2)
-        @simd for i in 1:size(A,1)           # Use SIMD over inner loop
-            out[i] += A[i,j]*b[j]  # Don't check that indicies are valid
+	@inbounds for j in 1:size(A,2)    # Don't check that indicies are valid
+        @simd for i in 1:size(A,1)    # Use SIMD over inner loop
+            out[i] += A[i,j]*b[j]
         end
     end
     return out
@@ -449,6 +449,8 @@ end
 if ready_benchmarks2 
 	local plt = plot_benchmarks(nrows_benchmark_plt,times_square_default_plt, times_square_rows_plt,times_square_cols_plt)
 	title!(plt,"Square Matrix multiply")
+	savefig("ex1i_square.png")
+	plt
 end
 
 # ╔═╡ 988b3ec3-71cd-4ea4-b007-e7d2c16d3502
@@ -474,8 +476,10 @@ end
 if ready_benchmarks2 
 	plt_tall = plot_benchmarks(nrows_benchmark_plt,times_tall_default_plt, times_tall_rows_plt,times_tall_cols_plt)
 	title!(plt_tall,"Tall")
+	savefig("ex1i_tall.png")
 	plt_short = plot_benchmarks(nrows_benchmark_plt,times_short_default_plt, times_short_rows_plt,times_short_cols_plt)
 	title!(plt_short,"Short")
+	savefig("ex1i_short.png")
 	plot(plt_tall,plt_short,layout=(1,2))
 end
 

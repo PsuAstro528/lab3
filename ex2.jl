@@ -478,14 +478,43 @@ Therefore, most languages call a common [FITSIO library written in C](https://he
 Unfortunately, the FITSIO package isn't as polished as the others.  It expects a `Dict` rather than a `DataFrame`, and it can't handle missing values.  So I've provided some helper functions at the bottom of the notebook.  Also, FITS files have complicated headers, so I'll provide a function to read all the tabular data from a simple FITS file.  As usual, we'll use each function once, so that Julia compiles them before we start timing.
 """
 
+# ╔═╡ e05f16d6-eb50-49a9-bf14-95d63c9da7ff
+begin
+	filename_fits_small = replace(small_csv_filename, ".csv" => ".fits")  
+	write_dataframe_as_fits(joinpath(path,filename_fits_small),small_df)
+	read_fits_tables(joinpath(path,filename_fits_small))
+end;
+
 # ╔═╡ 3b232365-f2fe-4edb-a39f-3e37c8cbb666
 md"Now we can time how long it takes to write and read the data as FITS files."
+
+# ╔═╡ 1992595f-9976-4b18-bf9c-df8a73d30dc8
+begin
+	filename_fits_small # make sure have already compiled functions
+	filename_fits = replace(filename_ipac, ".txt" => ".fits") 
+	with_terminal() do 
+		@time write_dataframe_as_fits(filename_fits,df)
+	end
+end
 
 # ╔═╡ 568862b3-6fce-426a-a9e2-e558adf3932a
 md"""
 I'm ready to benchmark reading a FITS file. $(@bind ready_read_fits CheckBox()) 
 $(@bind go_read_fits Button("Rerun the benchmarks."))
 """
+
+# ╔═╡ 52f9edd0-79b0-4a9a-9930-3a05d3aa2447
+if ready_read_fits
+	go_read_fits
+	time_read_fits = @elapsed read_fits_tables(filename_fits)
+	md"It took $time_read_fits seconds to read the FITS file."
+end
+
+# ╔═╡ 90d5244e-17be-4601-b922-8c254f1248bf
+begin
+	fits_filesize = filesize(filename_fits) /1024^2
+	hint(md"The FITS file size is $(round(fits_filesize,digits=2)) MB versus $(round(jld2_filesize,digits=2)) MB for the JLD2 and $(round(csv_filesize,digits=2)) MB for the CSV.")
+end
 
 # ╔═╡ ae79ee89-d788-4612-8b1d-fc22d85c7744
 md"2k.  How do the read/write times and file sizes for FITS compare to CSV and JLD2?"
@@ -585,35 +614,6 @@ function read_fits_tables(filename::String)
     return dict
 end
 
-
-# ╔═╡ e05f16d6-eb50-49a9-bf14-95d63c9da7ff
-begin
-	filename_fits_small = replace(small_csv_filename, ".csv" => ".fits")  
-	write_dataframe_as_fits(joinpath(path,filename_fits_small),small_df)
-	read_fits_tables(joinpath(path,filename_fits_small))
-end;
-
-# ╔═╡ 1992595f-9976-4b18-bf9c-df8a73d30dc8
-begin
-	filename_fits_small # make sure have already compiled functions
-	filename_fits = replace(filename_ipac, ".txt" => ".fits") 
-	with_terminal() do 
-		@time write_dataframe_as_fits(filename_fits,df)
-	end
-end
-
-# ╔═╡ 90d5244e-17be-4601-b922-8c254f1248bf
-begin
-	fits_filesize = filesize(filename_fits) /1024^2
-	hint(md"The FITS file size is $(round(fits_filesize,digits=2)) MB versus $(round(jld2_filesize,digits=2)) MB for the JLD2 and $(round(csv_filesize,digits=2)) MB for the CSV.")
-end
-
-# ╔═╡ 52f9edd0-79b0-4a9a-9930-3a05d3aa2447
-if ready_read_fits
-	go_read_fits
-	time_read_fits = @elapsed read_fits_tables(filename_fits)
-	md"It took $time_read_fits seconds to read the FITS file."
-end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
